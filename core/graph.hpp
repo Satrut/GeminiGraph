@@ -1508,6 +1508,10 @@ public:
       active
     );
     bool sparse = (active_edges < edges / 20);
+    
+    //  手动选择稀疏模式
+    sparse = true;
+    
     if (sparse) {
       for (int i=0;i<partitions;i++) {
         for (int s_i=0;s_i<sockets;s_i++) {

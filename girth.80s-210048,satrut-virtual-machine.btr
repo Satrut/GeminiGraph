@@ -1,0 +1,7 @@
+
+girth:210048 terminated with signal 11 at PC=5636a9e3a9df SP=7ffe08b9bde0.  Backtrace:
+./toolkits/girth(+0x89df)[0x5636a9e3a9df]
+./toolkits/girth(+0x67c8)[0x5636a9e387c8]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x7f6fdc629d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x7f6fdc629e40]
+./toolkits/girth(+0x69d5)[0x5636a9e389d5]
