@@ -26,7 +26,7 @@ double get_time() {
 
 int main(int argc, char **argv) {
     if (argc != 3) {
-        printf("floyd [file] [vertices]\n");
+        printf("floyd [file.txt] [vertices]\n");
         exit(-1);
     }
 
