@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
   MPI_Instance mpi(&argc, &argv);
 
   if (argc != 3) {
-    printf("girth [file] [vertices]\n");
+    printf("undirected_unweighted_girth [file] [vertices]\n");
     exit(-1);
   }
 
