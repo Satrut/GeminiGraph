@@ -138,9 +138,6 @@ void compute(Graph<Weight> *graph) {
         VertexId root = msg.root;
         for (AdjUnit<Weight> *ptr = outgoing_adj.begin;ptr != outgoing_adj.end;ptr++) {
           VertexId dst = ptr->neighbour;
-          // if (src == 23) {
-          //   std::cout << dst << std::endl;
-          // }
           // 不要把消息往回发
           if (dst == msg.pre) {
             continue;
@@ -173,6 +170,8 @@ void compute(Graph<Weight> *graph) {
           }
           else if (res->dis > msg.dis + ptr->edge_data) {
             // 新路径更短
+            // 更长的路径没必要转发，减小带宽压力
+            // 有res说明找到了环，但是只在dst处求出了该环的权值和，若继续转发该消息，环上的其他节点也能更新该环的权值，但耗费了更多无意义的资源
             write_min(&res->dis, msg.dis + ptr->edge_data);
             res->pre = src;
             res->sent = false;
@@ -209,6 +208,7 @@ void compute(Graph<Weight> *graph) {
       },
         active_in
         );
+    // 更新发送端和接收端节点集
     std::swap(active_in, active_out);
   }
 
@@ -217,23 +217,24 @@ void compute(Graph<Weight> *graph) {
     printf("exec_time=%lf(s)\n", exec_time);
   }
 
+  // 汇聚围长信息
   graph->gather_vertex_array(girth, 0);
   if (graph->partition_id == 0) {
     VertexId max_v_i = 0;
     for (VertexId v_i = 0;v_i < graph->vertices;v_i++) {
-      std::cout << v_i << " " << girth[v_i] << std::endl;
       if (girth[v_i] < 1e9 && girth[v_i] < girth[max_v_i]) {
         max_v_i = v_i;
       }
     }
     if (girth[max_v_i] < 1e9) {
-      printf("girth[%u]=%f\n", max_v_i, girth[max_v_i]);
+      printf("girth=%f\n", girth[max_v_i]);
     }
     else {
       std::cout << "cannot find circle" << std::endl;
     }
   }
 
+  // 释放malloc资源
   graph->dealloc_vertex_array(girth);
   delete active_in;
   delete active_out;
@@ -252,9 +253,9 @@ int main(int argc, char **argv) {
   graph->load_undirected_from_directed(argv[1], std::atoi(argv[2]));
 
   compute(graph);
-  // for (int run = 0;run < 5;run++) {
-  //   compute(graph);
-  // }
+  for (int run = 0;run < 5;run++) {
+    compute(graph);
+  }
 
   delete graph;
   return 0;
