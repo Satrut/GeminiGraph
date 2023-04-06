@@ -184,7 +184,7 @@ void compute(Graph<Weight> *graph) {
         }
         return activated;
       },
-        [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
+      [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
         // Weight msg = 1e9;
         // for (AdjUnit<Weight> *ptr = incoming_adj.begin;ptr != incoming_adj.end;ptr++) {
         //   VertexId src = ptr->neighbour;

@@ -180,7 +180,7 @@ void compute(Graph<Weight> *graph) {
         }
         return activated;
       },
-        [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
+      [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
         // Weight msg = 1e9;
         // for (AdjUnit<Weight> *ptr = incoming_adj.begin;ptr != incoming_adj.end;ptr++) {
         //   VertexId src = ptr->neighbour;
@@ -215,8 +215,7 @@ void compute(Graph<Weight> *graph) {
   graph->gather_vertex_array(girth, 0);
   if (graph->partition_id == 0) {
     VertexId max_v_i = 0;
-    for (VertexId v_i = 0;v_i < graph->vertices;v_i++) {
-      // std::cout << v_i << " " << girth[v_i] << std::endl;
+    for (VertexId v_i = 0;v_i < graph->vertices;v_i++) {      
       if (girth[v_i] < 1e9 && girth[v_i] < girth[max_v_i]) {
         max_v_i = v_i;
       }
@@ -230,7 +229,6 @@ void compute(Graph<Weight> *graph) {
   }
 
   graph->dealloc_vertex_array(girth);
-  // delete[]msglist;
   delete active_in;
   delete active_out;
 }
@@ -244,10 +242,8 @@ int main(int argc, char **argv) {
   }
 
   Graph<Weight> *graph;
-  graph = new Graph<Weight>();
-  // graph->load_undirected_from_directed(argv[1], std::atoi(argv[2]));
-  graph->load_directed(argv[1], std::atoi(argv[2]));
-  // VertexId root = std::atoi(argv[3]);
+  graph = new Graph<Weight>();  
+  graph->load_directed(argv[1], std::atoi(argv[2]));  
 
   compute(graph);
   // for (int run = 0;run < 5;run++) {
