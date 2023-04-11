@@ -5,7 +5,7 @@
 #include "core/graph.hpp"
 
 // 权值
-typedef int Weight;
+typedef float Weight;
 // 自定义单向链表，用于存储边和环的节点顺序
 struct MyList {
   VertexId vertex;
@@ -19,14 +19,14 @@ struct MyList {
 
 // 消息结构体
 struct MSG {
-  // 源节点
-  // VertexId root;
-  // 用begin、end记录路径节点
+  // 用begin开头的单链表记录路径节点
   MyList *begin;
-  MyList *end;
-  // VertexId pre;
+  // pre记录消息经过的上一节点
+  VertexId pre;
   // 距离
   Weight dis;
+  // 节点数
+  int count;
   // 是否发送
   bool sent;
   // 下一条消息
@@ -129,11 +129,10 @@ void compute(Graph<Weight> *graph) {
   MSG *init_msg = nullptr;
   for (VertexId i = 0;i < graph->vertices;i++) {
     init_msg = new MSG();
-    // init_msg->root = i;
-    // init_msg->pre = graph->vertices;
     init_msg->begin = new MyList(i);
-    init_msg->end = init_msg->begin;
+    init_msg->pre = graph->vertices;
     init_msg->dis = 0;
+    init_msg->count = 1;
     init_msg->sent = false;
     init_msg->next = nullptr;
     msglist[i].insert(init_msg);
@@ -155,14 +154,12 @@ void compute(Graph<Weight> *graph) {
       },
       [&](VertexId src, MSG msg, VertexAdjList<Weight> outgoing_adj) {
         VertexId activated = 0;
-        // VertexId root = msg.root;
         VertexId root = msg.begin->vertex;
-        std::cout << "mark1" << std::endl;
+
         for (AdjUnit<Weight> *ptr = outgoing_adj.begin;ptr != outgoing_adj.end;ptr++) {
           VertexId dst = ptr->neighbour;
-          // 不要把消息往回发
-          // if (dst == msg.pre) {
-          if (dst == msg.end->vertex) {
+          // 不要把消息往回发          
+          if (dst == msg.pre) {
             continue;
           }
           // 查找是否已存在到root的最短路径
@@ -173,19 +170,21 @@ void compute(Graph<Weight> *graph) {
             // 比较保存的围长大小
             if (new_cicle < girth[dst]) {
               // 更新围长大小及环的信息
+              // std::cout << "root:" << root << " src:" << src << " dst:" << dst << " msg.end->vertex:" << msg.end->vertex << std::endl;
+              // std::cout << "res->dis:" << res->dis << " msg.dis:" << msg.dis << " ptr->edge_data:" << ptr->edge_data << " new_cicle:" << new_cicle << std::endl;
               write_min(&girth[dst], new_cicle);
               circle[dst].clear();
               // 插入p(s,u)
-              for (MyList *it = msg.begin;it != nullptr;it = it->next) {
-                circle[dst].push_back(it->vertex);
+              for (MyList *node = msg.begin;node != nullptr;node = node->next) {
+                circle[dst].push_back(node->vertex);
               }
               // 倒序插入p(s,v)，且不插入最后一个s
-              VertexId ids[res->dis + 1];
+              VertexId ids[res->count];
               VertexId id = 0;
               for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
                 ids[id] = node->vertex;
               }
-              for (id--;id > 0;id--) {
+              for (id = res->count - 1;id > 0;id--) {
                 circle[dst].push_back(ids[id]);
               }
             }
@@ -195,9 +194,9 @@ void compute(Graph<Weight> *graph) {
             // 不存在root的路径
             MSG *new_msg = new MSG();
             new_msg->dis = msg.dis + ptr->edge_data;
+            new_msg->count = msg.count + 1;
+            new_msg->pre = src;
             new_msg->next = nullptr;
-            // new_msg->root = msg.root;
-            // new_msg->pre = src;
 
             // 复制路径
             MyList *node = msg.begin;
@@ -209,9 +208,7 @@ void compute(Graph<Weight> *graph) {
               cur = cur->next;
               node = node->next;
             }
-            cur->next = new MyList(dst);
-            new_msg->end = cur->next;
-            new_msg->end->next = nullptr;
+            cur->next = new MyList(dst);            
 
             new_msg->sent = false;
             msglist[dst].insert(new_msg);
@@ -226,10 +223,12 @@ void compute(Graph<Weight> *graph) {
             // 更长的路径没必要转发，减小带宽压力
             // 有res说明找到了环，但是只在dst处求出了该环的权值和，若继续转发该消息，环上的其他节点也能更新该环的权值，但耗费了更多无意义的资源
             write_min(&res->dis, msg.dis + ptr->edge_data);
+            res->count = msg.count + 1;
+            res->pre = src;
 
             // 清空路径
             MyList *cur = res->begin, *next = res->begin->next;
-            res->begin = res->end = nullptr;
+            res->begin = nullptr;
             while (cur != nullptr) {
               next = cur->next;
               delete cur;
@@ -247,8 +246,6 @@ void compute(Graph<Weight> *graph) {
               node = node->next;
             }
             cur->next = new MyList(dst);
-            res->end = cur->next;
-            res->end->next = nullptr;
 
             res->sent = false;
             // 避免重复设置下轮发送端节点
@@ -288,11 +285,11 @@ void compute(Graph<Weight> *graph) {
     }
     if (girth[max_v_i] < 1e9) {
       printf("girth=%f\n", girth[max_v_i]);
-      // std::cout << "circle: ";
-      // for (auto it = circle[max_v_i].begin();it != circle[max_v_i].end();it++) {
-      //   std::cout << *it << " ";
-      // }
-      // std::cout << std::endl;
+      std::cout << "circle: ";
+      for (auto it = circle[max_v_i].begin();it != circle[max_v_i].end();it++) {
+        std::cout << *it << " ";
+      }
+      std::cout << std::endl;
     }
     else {
       std::cout << "cannot find circle" << std::endl;
