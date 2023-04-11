@@ -169,9 +169,7 @@ void compute(Graph<Weight> *graph) {
             Weight new_cicle = res->dis + msg.dis + ptr->edge_data;
             // 比较保存的围长大小
             if (new_cicle < girth[dst]) {
-              // 更新围长大小及环的信息
-              // std::cout << "root:" << root << " src:" << src << " dst:" << dst << " msg.end->vertex:" << msg.end->vertex << std::endl;
-              // std::cout << "res->dis:" << res->dis << " msg.dis:" << msg.dis << " ptr->edge_data:" << ptr->edge_data << " new_cicle:" << new_cicle << std::endl;
+              // 更新围长大小及环的信息          
               write_min(&girth[dst], new_cicle);
               circle[dst].clear();
               // 插入p(s,u)
@@ -208,7 +206,7 @@ void compute(Graph<Weight> *graph) {
               cur = cur->next;
               node = node->next;
             }
-            cur->next = new MyList(dst);            
+            cur->next = new MyList(dst);
 
             new_msg->sent = false;
             msglist[dst].insert(new_msg);
@@ -253,7 +251,6 @@ void compute(Graph<Weight> *graph) {
               active_out->set_bit(dst);
               activated += 1;
             }
-            std::cout << "mark2" << std::endl;
           }
         }
         return activated;
@@ -310,7 +307,7 @@ int main(int argc, char **argv) {
     exit(-1);
   }
   int vertices = std::atoi(argv[2]);
-  if (vertices < 0) {
+  if (vertices <= 0) {
     std::cout << "vertex numbers must be bigger than 0" << std::endl;
     exit(-1);
   }
