@@ -52,6 +52,7 @@
         "mutex": "cpp",
         "numbers": "cpp",
         "semaphore": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "list": "cpp"
     }
 }

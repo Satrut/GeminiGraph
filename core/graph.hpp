@@ -1479,15 +1479,15 @@ public:
 
   // emit a message to a vertex's master (dense) / mirror (sparse)
   template<typename M>
-  void emit(VertexId vtx, M msg) {
-    int t_i = omp_get_thread_num();
-    MsgUnit<M> * buffer = (MsgUnit<M>*)local_send_buffer[t_i]->data;
+  void emit(VertexId vtx, M msg) {    
+    int t_i = omp_get_thread_num();    
+    MsgUnit<M> *buffer = (MsgUnit<M>*)local_send_buffer[t_i]->data;
     buffer[local_send_buffer[t_i]->count].vertex = vtx;
-    buffer[local_send_buffer[t_i]->count].msg_data = msg;
-    local_send_buffer[t_i]->count += 1;
-    if (local_send_buffer[t_i]->count==local_send_buffer_limit) {
+    buffer[local_send_buffer[t_i]->count].msg_data = msg;    
+    local_send_buffer[t_i]->count += 1;    
+    if (local_send_buffer[t_i]->count == local_send_buffer_limit) {      
       flush_local_send_buffer<M>(t_i);
-    }
+    }    
   }
 
   // process edges

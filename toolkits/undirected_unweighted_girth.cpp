@@ -1,18 +1,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-
+#include <list>
 #include "core/graph.hpp"
 
 // 权值
-typedef float Weight;
+typedef int Weight;
+// 自定义单向链表，用于存储边和环的节点顺序
+struct MyList {
+  VertexId vertex;
+  MyList *next;
+  MyList() {}
+  MyList(VertexId vertex) {
+    this->vertex = vertex;
+    this->next = nullptr;
+  }
+};
 
 // 消息结构体
 struct MSG {
-  VertexId root;
-  VertexId pre;
+  // 源节点
+  // VertexId root;
+  // 用begin、end记录路径节点
+  MyList *begin;
+  MyList *end;
+  // VertexId pre;
+  // 距离
   Weight dis;
+  // 是否发送
   bool sent;
+  // 下一条消息
   MSG *next;
 };
 
@@ -68,7 +85,7 @@ public:
   MSG *find(VertexId root) {
     MSG *cur = begin;
     while (cur != nullptr) {
-      if (cur->root == root) {
+      if (cur->begin->vertex == root) {
         return cur;
       }
       cur = cur->next;
@@ -80,7 +97,7 @@ public:
     MSG *res = nullptr;
     MSG *cur = begin;
     while (cur != nullptr) {
-      if (cur->sent == false && (res == nullptr || res->root > cur->root)) {
+      if (cur->sent == false && (res == nullptr || res->begin->vertex > cur->begin->vertex)) {
         res = cur;
       }
       cur = cur->next;
@@ -93,8 +110,9 @@ void compute(Graph<Weight> *graph) {
   double exec_time = 0;
   exec_time -= get_time();
 
-  // 每个点保存自己计算出的围长
+  // 每个点保存自己计算出的围长及环的数据
   Weight *girth = graph->alloc_vertex_array<Weight>();
+  std::list<VertexId> circle[graph->vertices];
   VertexSubset *active_in = graph->alloc_vertex_subset();
   VertexSubset *active_out = graph->alloc_vertex_subset();
   // 源节点集
@@ -109,10 +127,12 @@ void compute(Graph<Weight> *graph) {
   MSGList msglist[graph->vertices];
   // 初始化消息链表
   MSG *init_msg = nullptr;
-  for (int i = 0;i < graph->vertices;i++) {
+  for (VertexId i = 0;i < graph->vertices;i++) {
     init_msg = new MSG();
-    init_msg->root = i;
-    init_msg->pre = graph->vertices;
+    // init_msg->root = i;
+    // init_msg->pre = graph->vertices;
+    init_msg->begin = new MyList(i);
+    init_msg->end = init_msg->begin;
     init_msg->dis = 0;
     init_msg->sent = false;
     init_msg->next = nullptr;
@@ -135,11 +155,14 @@ void compute(Graph<Weight> *graph) {
       },
       [&](VertexId src, MSG msg, VertexAdjList<Weight> outgoing_adj) {
         VertexId activated = 0;
-        VertexId root = msg.root;
+        // VertexId root = msg.root;
+        VertexId root = msg.begin->vertex;
+        std::cout << "mark1" << std::endl;
         for (AdjUnit<Weight> *ptr = outgoing_adj.begin;ptr != outgoing_adj.end;ptr++) {
           VertexId dst = ptr->neighbour;
           // 不要把消息往回发
-          if (dst == msg.pre) {
+          // if (dst == msg.pre) {
+          if (dst == msg.end->vertex) {
             continue;
           }
           // 查找是否已存在到root的最短路径
@@ -149,18 +172,48 @@ void compute(Graph<Weight> *graph) {
             Weight new_cicle = res->dis + msg.dis + ptr->edge_data;
             // 比较保存的围长大小
             if (new_cicle < girth[dst]) {
+              // 更新围长大小及环的信息
               write_min(&girth[dst], new_cicle);
+              circle[dst].clear();
+              // 插入p(s,u)
+              for (MyList *it = msg.begin;it != nullptr;it = it->next) {
+                circle[dst].push_back(it->vertex);
+              }
+              // 倒序插入p(s,v)，且不插入最后一个s
+              VertexId ids[res->dis + 1];
+              VertexId id = 0;
+              for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
+                ids[id] = node->vertex;
+              }
+              for (id--;id > 0;id--) {
+                circle[dst].push_back(ids[id]);
+              }
             }
           }
           // 更新最短路径
           if (res == nullptr) {
             // 不存在root的路径
             MSG *new_msg = new MSG();
-            new_msg->root = msg.root;
-            new_msg->pre = src;
             new_msg->dis = msg.dis + ptr->edge_data;
-            new_msg->sent = false;
             new_msg->next = nullptr;
+            // new_msg->root = msg.root;
+            // new_msg->pre = src;
+
+            // 复制路径
+            MyList *node = msg.begin;
+            MyList *cur = new MyList(node->vertex);
+            new_msg->begin = cur;
+            node = node->next;
+            while (node != nullptr) {
+              cur->next = new MyList(node->vertex);
+              cur = cur->next;
+              node = node->next;
+            }
+            cur->next = new MyList(dst);
+            new_msg->end = cur->next;
+            new_msg->end->next = nullptr;
+
+            new_msg->sent = false;
             msglist[dst].insert(new_msg);
             // 避免重复设置下轮发送端节点
             if (!active_out->get_bit(dst)) {
@@ -173,37 +226,44 @@ void compute(Graph<Weight> *graph) {
             // 更长的路径没必要转发，减小带宽压力
             // 有res说明找到了环，但是只在dst处求出了该环的权值和，若继续转发该消息，环上的其他节点也能更新该环的权值，但耗费了更多无意义的资源
             write_min(&res->dis, msg.dis + ptr->edge_data);
-            res->pre = src;
+
+            // 清空路径
+            MyList *cur = res->begin, *next = res->begin->next;
+            res->begin = res->end = nullptr;
+            while (cur != nullptr) {
+              next = cur->next;
+              delete cur;
+              cur = next;
+            }
+
+            // 复制路径
+            MyList *node = msg.begin;
+            cur = new MyList(node->vertex);
+            res->begin = cur;
+            node = node->next;
+            while (node != nullptr) {
+              cur->next = new MyList(node->vertex);
+              cur = cur->next;
+              node = node->next;
+            }
+            cur->next = new MyList(dst);
+            res->end = cur->next;
+            res->end->next = nullptr;
+
             res->sent = false;
             // 避免重复设置下轮发送端节点
             if (!active_out->get_bit(dst)) {
               active_out->set_bit(dst);
               activated += 1;
             }
+            std::cout << "mark2" << std::endl;
           }
         }
         return activated;
       },
-      [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
-        // Weight msg = 1e9;
-        // for (AdjUnit<Weight> *ptr = incoming_adj.begin;ptr != incoming_adj.end;ptr++) {
-        //   VertexId src = ptr->neighbour;
-        //   // if (active_in->get_bit(src)) {
-        //   Weight relax_dist = distance[src] + ptr->edge_data;
-        //   if (relax_dist < msg) {
-        //     // printf("src:%d, dst:%d, distance[src]:%f, ptr->edge_data:%f\n", src, dst, distance[src], ptr->edge_data);
-        //     msg = relax_dist;
-        //   }
-        //   // }
-        // }
-        // if (msg < 1e9) graph->emit(dst, msg);
+        [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
       },
       [&](VertexId dst, MSG msg) {
-        // if (msg < distance[dst]) {
-        //   write_min(&distance[dst], msg);
-        //   active_out->set_bit(dst);
-        //   return 1;
-        // }
         return 0;
       },
         active_in
@@ -228,6 +288,11 @@ void compute(Graph<Weight> *graph) {
     }
     if (girth[max_v_i] < 1e9) {
       printf("girth=%f\n", girth[max_v_i]);
+      // std::cout << "circle: ";
+      // for (auto it = circle[max_v_i].begin();it != circle[max_v_i].end();it++) {
+      //   std::cout << *it << " ";
+      // }
+      // std::cout << std::endl;
     }
     else {
       std::cout << "cannot find circle" << std::endl;
@@ -247,10 +312,15 @@ int main(int argc, char **argv) {
     printf("undirected_unweighted_girth [file] [vertices]\n");
     exit(-1);
   }
+  int vertices = std::atoi(argv[2]);
+  if (vertices < 0) {
+    std::cout << "vertex numbers must be bigger than 0" << std::endl;
+    exit(-1);
+  }
 
   Graph<Weight> *graph;
   graph = new Graph<Weight>();
-  graph->load_undirected_from_directed(argv[1], std::atoi(argv[2]));
+  graph->load_undirected_from_directed(argv[1], vertices);
 
   compute(graph);
   for (int run = 0;run < 5;run++) {
