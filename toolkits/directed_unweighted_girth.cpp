@@ -287,7 +287,7 @@ void compute(Graph<Weight> *graph) {
   delete active_in;
   delete active_out;
 }
- 
+
 int main(int argc, char **argv) {
   MPI_Instance mpi(&argc, &argv);
 
