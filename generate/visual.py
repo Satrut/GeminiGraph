@@ -4,9 +4,12 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser(description='generate a random graph')
-parser.add_argument('-v', required=True, type=int, help='number of vertices in the graph')
-parser.add_argument('-f', required=True, type=str, help='the file name for the graph')
-parser.add_argument('-o', required=True, type=str, help='name of visualization image')
+parser.add_argument('-v', required=True, type=int,
+                    help='number of vertices in the graph')
+parser.add_argument('-f', required=True, type=str,
+                    help='the file name for the graph')
+parser.add_argument('-o', required=True, type=str,
+                    help='name of visualization image')
 
 opt = parser.parse_args()
 opt.o = os.path.basename(opt.o)
