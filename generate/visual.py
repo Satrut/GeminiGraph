@@ -23,7 +23,6 @@ with open(opt.f, "rt") as f:
         i, j, w = line.split()
         i, j, w = int(i), int(j), int(w)
         Graph.add_edge(i, j, weight=w)
-# pos = nx.circular_layout(Graph)
-nx.draw_shell(Graph, with_labels=True)
+nx.draw_circular(Graph, with_labels=True)
 
 plt.savefig(opt.o)
