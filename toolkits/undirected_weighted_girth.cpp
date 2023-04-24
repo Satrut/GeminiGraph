@@ -166,11 +166,11 @@ void compute(Graph<Weight> *graph) {
           MSG *res = msglist[dst].find(root);
           // 求解围长
           if (res != nullptr) {
-            Weight new_circle = res->dis + msg.dis + ptr->edge_data;
+            Weight new_cicle = res->dis + msg.dis + ptr->edge_data;
             // 比较保存的围长大小
-            if (new_circle < girth[dst]) {
+            if (new_cicle < girth[dst]) {
               // 更新围长大小及环的信息          
-              write_min(&girth[dst], new_circle);
+              write_min(&girth[dst], new_cicle);
               circle[dst].clear();
               // 插入p(s,u)
               for (MyList *node = msg.begin;node != nullptr;node = node->next) {
@@ -300,7 +300,7 @@ void compute(Graph<Weight> *graph) {
 }
 
 int main(int argc, char **argv) {
-  MPI_Instance mpi(&argc, &argv);  
+  MPI_Instance mpi(&argc, &argv);
 
   if (argc != 3) {
     printf("undirected_unweighted_girth [file] [vertices]\n");

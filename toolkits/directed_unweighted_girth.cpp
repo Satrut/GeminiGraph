@@ -161,11 +161,11 @@ void compute(Graph<Weight> *graph) {
           // 求解围长
           if (root == dst) {
             // 存在环
-            Weight new_cicle = msg.dis + ptr->edge_data;
+            Weight new_circle = msg.dis + ptr->edge_data;
             // 比较保存的围长大小
-            if (new_cicle < girth[dst]) {
+            if (new_circle < girth[dst]) {
               // 更新围长大小及环的信息          
-              write_min(&girth[dst], new_cicle);
+              write_min(&girth[dst], new_circle);
               circle[dst].clear();
               // 插入p(s,u)，s就是v
               for (MyList *node = msg.begin;node != nullptr;node = node->next) {
