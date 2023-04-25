@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <list>
+#include <math.h>
 #include "core/graph.hpp"
 
 // 权值
@@ -106,12 +107,17 @@ public:
   }
 };
 
-void compute(Graph<Weight> *graph) {
+Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
   double exec_time = 0;
   exec_time -= get_time();
 
+  // eps用于浮点数间的比较
+  Weight eps = 1e-6;
   // 每个点保存自己计算出的围长及环的数据
-  Weight *girth = graph->alloc_vertex_array<Weight>();
+  // Weight *girth = graph->alloc_vertex_array<Weight>();
+  // 保存现有最小围长及节点
+  Weight girth = 1e9;
+  VertexId girthId = -1;
   std::list<VertexId> circle[graph->vertices];
   VertexSubset *active_in = graph->alloc_vertex_subset();
   VertexSubset *active_out = graph->alloc_vertex_subset();
@@ -121,7 +127,7 @@ void compute(Graph<Weight> *graph) {
   VertexId active_vertices = graph->vertices;
 
   // 初始围长赋值
-  graph->fill_vertex_array(girth, (Weight) 1e9);
+  // graph->fill_vertex_array(girth, (Weight) 1e9);
 
   // 节点集消息链表数组
   MSGList msglist[graph->vertices];
@@ -138,7 +144,7 @@ void compute(Graph<Weight> *graph) {
     msglist[i].insert(init_msg);
   }
 
-  for (int i_i = 0;active_vertices > 0;i_i++) {
+  for (int i_i = 0;i_i < graph->vertices;i_i++) {
     if (graph->partition_id == 0) {
       printf("active(%d)>=%u\n", i_i, active_vertices);
     }
@@ -166,26 +172,41 @@ void compute(Graph<Weight> *graph) {
           MSG *res = msglist[dst].find(root);
           // 求解围长
           if (res != nullptr) {
-            Weight new_cicle = res->dis + msg.dis + ptr->edge_data;
-            // 比较保存的围长大小
-            if (new_cicle < girth[dst]) {
-              // 更新围长大小及环的信息          
-              write_min(&girth[dst], new_cicle);
-              circle[dst].clear();
-              // 插入p(s,u)
-              for (MyList *node = msg.begin;node != nullptr;node = node->next) {
-                circle[dst].push_back(node->vertex);
-              }
-              // 倒序插入p(s,v)，且不插入最后一个s
-              VertexId ids[res->count];
-              VertexId id = 0;
-              for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
-                ids[id] = node->vertex;
-              }
-              for (id = res->count - 1;id > 0;id--) {
-                circle[dst].push_back(ids[id]);
-              }
+            girth = res->dis + msg.dis + ptr->edge_data;
+            girthId = dst;
+            circle[dst].clear();
+            // 插入p(s,u)
+            for (MyList *node = msg.begin;node != nullptr;node = node->next) {
+              circle[dst].push_back(node->vertex);
             }
+            // 倒序插入p(s,v)，且不插入最后一个s
+            VertexId ids[res->count];
+            VertexId id = 0;
+            for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
+              ids[id] = node->vertex;
+            }
+            for (id = res->count - 1;id > 0;id--) {
+              circle[dst].push_back(ids[id]);
+            }
+            // 比较保存的围长大小
+            // if (new_cicle < girth[dst]) {
+            //   // 更新围长大小及环的信息          
+            //   write_min(&girth[dst], new_cicle);
+            //   circle[dst].clear();
+            //   // 插入p(s,u)
+            //   for (MyList *node = msg.begin;node != nullptr;node = node->next) {
+            //     circle[dst].push_back(node->vertex);
+            //   }
+            //   // 倒序插入p(s,v)，且不插入最后一个s
+            //   VertexId ids[res->count];
+            //   VertexId id = 0;
+            //   for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
+            //     ids[id] = node->vertex;
+            //   }
+            //   for (id = res->count - 1;id > 0;id--) {
+            //     circle[dst].push_back(ids[id]);
+            //   }
+            // }
           }
           // 更新最短路径
           if (res == nullptr) {
@@ -297,18 +318,20 @@ void compute(Graph<Weight> *graph) {
   graph->dealloc_vertex_array(girth);
   delete active_in;
   delete active_out;
+  return 0;
 }
 
 int main(int argc, char **argv) {
   MPI_Instance mpi(&argc, &argv);
 
-  if (argc != 3) {
-    printf("undirected_unweighted_girth [file] [vertices]\n");
+  if (argc != 4) {
+    printf("undirected_unweighted_girth [file] [vertices] [max Weight]\n");
     exit(-1);
   }
   int vertices = std::atoi(argv[2]);
-  if (vertices <= 0) {
-    std::cout << "vertex numbers must be bigger than 0" << std::endl;
+  Weight maxWeight = std::atof(argv[3]);
+  if (vertices <= 0 || maxWeight <= 0) {
+    std::cout << "Parameters Error" << std::endl;
     exit(-1);
   }
 
@@ -316,10 +339,54 @@ int main(int argc, char **argv) {
   graph = new Graph<Weight>();
   graph->load_undirected_from_directed(argv[1], vertices);
 
-  compute(graph);
-  // for (int run = 0;run < 5;run++) {
-  //   compute(graph);
-  // }
+  // i表示阶段，idx表示2的i次方，用于更新t
+  int i = 0, idx = 1;
+  // alpha为下界，beta为上界，t为距离限制
+  Weight alpha = 3, beta = vertices * maxWeight, t = 1;
+  // eps用于浮点数间的比较
+  Weight eps = 1e-6;
+  // conditionMark标记运行多源有限距离的宽度优先搜索算法后条件1/2发生，false为2发生，true为1发生
+  bool conditionMark = false;
+
+  while (beta - alpha - 2 > eps) {
+    if (graph->partition_id == 0) {
+      // 协调点v0计算t
+      if (vertices * maxWeight - beta > eps) {
+        int tmp = floor((alpha + beta) / 4);
+        if (abs(t - tmp) < eps) {
+          t++;
+        }
+        else {
+          t = tmp;
+        }
+      }
+      else {
+        t = idx;
+        idx *= 2;
+      }
+      // v0传递t
+      for (int i_i = 1;i < graph->partitions;i++) {
+        MPI_Send(&t, 1, MPI_FLOAT, i_i, 0, MPI_COMM_WORLD);
+      }
+    }
+    else {
+      // 其他节点接收t
+      MPI_Recv(&t, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
+    // 同步所有节点
+    MPI_Barrier(MPI_COMM_WORLD);
+    // 初始化conditionMark
+    conditionMark = false;
+
+    // 运行多源有限距离的宽度优先搜索算法
+    Weight minGirth = compute(graph, t, &conditionMark);
+
+    // 更新 α和 β
+
+    i++;
+  }
+
 
   delete graph;
   return 0;
