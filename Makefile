@@ -1,5 +1,5 @@
 ROOT_DIR= $(shell pwd)
-TARGETS= toolkits/undirected_unweighted_girth toolkits/directed_unweighted_girth
+TARGETS= toolkits/undirected_unweighted_girth toolkits/directed_unweighted_girth toolkits/undirected_weighted_girth
 MACROS= 
 # MACROS= -D PRINT_DEBUG_MESSAGES
 

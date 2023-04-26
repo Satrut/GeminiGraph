@@ -7,13 +7,13 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);    //获取进程组中进程编号rank
     MPI_Comm_size(MPI_COMM_WORLD, &size);    //获取进程组中进程数size
 
-    float number;
+    bool number;
     if (rank == 0) {        
-        number = 2.5;
+        number = false;
         MPI_Send(
             /* data         = */ &number,
             /* count        = */ 1,
-            /* datatype     = */ MPI_FLOAT,
+            /* datatype     = */ MPI_CHAR,
             /* destination  = */ 1,
             /* tag          = */ 0,
             /* communicator = */ MPI_COMM_WORLD);
@@ -22,14 +22,15 @@ int main(int argc, char *argv[]) {
         MPI_Recv(
             /* data         = */ &number,
             /* count        = */ 1,
-            /* datatype     = */ MPI_FLOAT,
+            /* datatype     = */ MPI_CHAR,
             /* source       = */ 0,
             /* tag          = */ 0,
             /* communicator = */ MPI_COMM_WORLD,
             /* status       = */ MPI_STATUS_IGNORE);
-        printf("Process %d received number %f from process 0\n", rank, number);
+        cout << number << endl;
     }
 
     MPI_Finalize();    //退出MPI环境
+
     return 0;
 }
