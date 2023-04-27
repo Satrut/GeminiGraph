@@ -1,8 +1,18 @@
 #include<bits/stdc++.h>
 #include <sys/time.h>
 using namespace std;
-int edge[100][100];
-int dis[100][100];
+typedef float Weight;
+Weight edge[10000][10000];
+Weight dis[10000][10000];
+
+Weight minWeight(Weight a, Weight b) {
+    if ((a > b) && (fabs(a - b) > FLT_EPSILON)) {
+        return b;
+    }
+    else {
+        return a;
+    }
+}
 
 void split(string s, string delimiter, vector<string> &res) {
     size_t pos_start = 0, pos_end, delim_len = delimiter.length();
@@ -45,35 +55,40 @@ int main(int argc, char **argv) {
     string line;
     vector<string> container;
     uint32_t src, dst;
+    Weight w;
     if (in.is_open()) {
         while (getline(in, line)) {
             split(line, " ", container);
             src = (uint32_t) stoi(container[0]);
             dst = (uint32_t) stoi(container[1]);
+            w = (Weight) stof(container[2]);
             assert(src >= 0 && dst >= 0);
-            dis[src][dst] = dis[dst][src] = edge[src][dst] = edge[dst][src] = 1;
+            dis[src][dst] = dis[dst][src] = edge[src][dst] = edge[dst][src] = w;
         }
     }
     else {
         cout << "cannot open input file" << endl;
     }
 
-    int ans = 1e8;
+    Weight ans = 1e8;
     for (int k = 0;k < vertices;k++) {
         for (int i = 0;i < k;i++) {
             for (int j = i + 1;j < k;j++) {
-                ans = min(ans, dis[i][j] + edge[j][k] + edge[k][i]);
+                if ((ans > dis[i][j] + edge[j][k] + edge[k][i]) && (fabs(ans - dis[i][j] + edge[j][k] + edge[k][i]) > FLT_EPSILON)) {
+                    cout << dis[i][j] + edge[j][k] + edge[k][i] << " " << i << " " << j << " " << k << endl;
+                }
+                ans = minWeight(ans, dis[i][j] + edge[j][k] + edge[k][i]);
             }
         }
         for (int i = 0;i < vertices;i++) {
             for (int j = 0;j < vertices;j++) {
-                dis[i][j] = min(dis[i][j], dis[i][k] + dis[k][j]);
+                dis[i][j] = minWeight(dis[i][j], dis[i][k] + dis[k][j]);
             }
         }
     }
 
     exec_time += get_time();
-    if (ans == 1e8) {
+    if (fabs(ans - 1e8) <= FLT_EPSILON) {
         cout << "cannot find circle" << endl;
     }
     else {

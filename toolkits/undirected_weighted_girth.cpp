@@ -109,11 +109,7 @@ public:
 };
 
 Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
-  // double exec_time = 0;
-  // exec_time -= get_time();
 
-  // 每个点保存自己计算出的围长及环的数据
-  // Weight *girth = graph->alloc_vertex_array<Weight>();
   // 保存现有最小围长及节点ID
   Weight girth = 1e9;
   VertexId girthId = graph->partitions;
@@ -124,9 +120,6 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
   active_in->clear();
   active_in->fill();
   VertexId active_vertices = graph->vertices;
-
-  // 初始围长赋值
-  // graph->fill_vertex_array(girth, (Weight) 1e9);
 
   // 节点集消息链表数组
   MSGList msglist[graph->vertices];
@@ -262,6 +255,7 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
           MPI_Recv(&tmpGirth, 1, MPI_FLOAT, v_i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
           if (tmpMark) {
             // 其他节点条件1触发 更新conditionMark、girth及ID
+            printf("tmpGirth:%f", tmpGirth);
             *conditionMark = true;
             if ((girth > tmpGirth) && (fabs(girth - tmpGirth) > FLT_EPSILON)) {
               girth = tmpGirth;
@@ -319,11 +313,6 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
     std::swap(active_in, active_out);
   }
 
-  // exec_time += get_time();
-  // if (graph->partition_id == 0) {
-  //   printf("exec_time=%lf(s)\n", exec_time);
-  // }
-
   // 释放malloc资源
   // graph->dealloc_vertex_array(girth);
   delete active_in;
@@ -352,7 +341,7 @@ int main(int argc, char **argv) {
   // i表示阶段，idx表示2的i次方，用于更新t
   int i = 0, idx = 1;
   // alpha为下界，beta为上界，t为距离限制
-  Weight alpha = 3, beta = vertices * maxWeight, t = 1;
+  Weight alpha = 1, beta = vertices * maxWeight, t = 1;
   // conditionMark标记运行多源有限距离的宽度优先搜索算法后条件1/2发生，false为2发生，true为1发生
   bool conditionMark = false;
   // mingirth保存最小围长
@@ -382,15 +371,15 @@ int main(int argc, char **argv) {
           MPI_Send(&t, 1, MPI_FLOAT, v_i, 0, MPI_COMM_WORLD);
         }
       }
+      printf("t:%f\n", t);
     }
     else {
       // 其他节点接收t
       MPI_Recv(&t, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
-    // printf("alpha:%f\tbeta:%f\tt:%f\n", alpha, beta, t);
 
     // 同步所有节点
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     // 初始化conditionMark
     conditionMark = false;
 
@@ -429,6 +418,7 @@ int main(int argc, char **argv) {
           MPI_Send(&beta, 1, MPI_FLOAT, v_i, 0, MPI_COMM_WORLD);
         }
       }
+      printf("alpha:%f\tbeta:%f\n", alpha, beta);
     }
     else {
       // 其他节点接收更新后的alpha和beta
