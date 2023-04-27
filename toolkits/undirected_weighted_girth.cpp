@@ -161,6 +161,12 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
           if (dst == msg.pre) {
             continue;
           }
+
+          // 超过距离限制t则放弃，既不能计算围长也不能更新信息
+          if ((msg.dis + ptr->edge_data > t) && (fabs(msg.dis + ptr->edge_data - t) > FLT_EPSILON)) {
+            continue;
+          }
+
           // 查找是否已存在到root的最短路径
           MSG *res = msglist[dst].find(root);
           // 已存在root的路径，求解围长
@@ -185,6 +191,8 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
                 continue;
               }
 
+              printf("src:%d dst:%d edgedata:%f\n", src, dst, ptr->edge_data);
+
               circle[dst].clear();
               // 插入p(s,u)
               for (MyList *node = msg.begin;node != nullptr;node = node->next) {
@@ -201,8 +209,8 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
               }
             }
           }
-          // 不存在root的路径且满足距离限制t
-          else if ((msg.dis + ptr->edge_data < t) && (fabs(msg.dis + ptr->edge_data - t) > FLT_EPSILON)) {
+          // 不存在root的路径则更新，前面已验证满足距离限制t
+          else {
             MSG *new_msg = new MSG();
             new_msg->dis = msg.dis + ptr->edge_data;
             new_msg->count = msg.count + 1;
