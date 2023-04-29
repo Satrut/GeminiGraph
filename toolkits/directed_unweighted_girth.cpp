@@ -306,9 +306,6 @@ int main(int argc, char **argv) {
   graph->load_directed(argv[1], vertices);
 
   compute(graph);
-  for (int run = 0;run < 5;run++) {
-    compute(graph);
-  }
 
   delete graph;
   return 0;

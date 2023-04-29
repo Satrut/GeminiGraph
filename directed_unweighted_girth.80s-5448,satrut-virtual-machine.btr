@@ -1,0 +1,7 @@
+
+directed_unweighted_girth:5448 terminated with signal 11 at PC=55ef8af4dfa1 SP=7f84f76b3b70.  Backtrace:
+./toolkits/directed_unweighted_girth(+0x7fa1)[0x55ef8af4dfa1]
+./toolkits/directed_unweighted_girth(+0x7701)[0x55ef8af4d701]
+/lib/x86_64-linux-gnu/libgomp.so.1(+0x1db9e)[0x7f84fedb8b9e]
+/lib/x86_64-linux-gnu/libc.so.6(+0x94b43)[0x7f84fbe94b43]
+/lib/x86_64-linux-gnu/libc.so.6(+0x126a00)[0x7f84fbf26a00]

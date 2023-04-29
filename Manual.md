@@ -3,15 +3,15 @@
 - 生成数据集
   - cd data/
   - 生成无向无权图
-    - python3 unweighted_graph.py -v 10 -e 15 -o undirected_unweighted_graph1.txt --undirected
+    - python3 unweighted_graph.py -v 1000 -e 2000 -o undirected_unweighted_graph1.txt --undirected
   - 将无向无权图数据转化为图片
     - python3 visual.py -v 10 -f undirected_unweighted_graph1.txt -o undirected_unweighted_graph1.png --undirected
   - 生成有向无权图
-    - python3 unweighted_graph.py -v 10 -e 15 -o directed_unweighted_graph1.txt
+    - python3 unweighted_graph.py -v 100 -e 200 -o directed_unweighted_graph1.txt
   - 将无向无权图数据转化为图片
     - python3 visual.py -v 10 -f directed_unweighted_graph1.txt -o directed_unweighted_graph1.png
   - 生成无向有权图
-    - python3 weighted_graph.py -v 100 -e 100 -w 10 -o undirected_weighted_graph1.txt
+    - python3 weighted_graph.py -v 1000 -e 2000 -w 20 -o undirected_weighted_graph1.txt
   - txt格式转bin格式
     - ./../convert/txt2bin undirected_unweighted_graph1.txt undirected_unweighted_graph1.bin
     - ./../convert/txt2bin directed_unweighted_graph1.txt directed_unweighted_graph1.bin
@@ -25,7 +25,7 @@
   - floyd
     - ./floyd/floyd data/undirected_weighted_graph1.txt 100
   - 无向有权图围长
-    - mpirun -np 1 -f ./mpi_config ./toolkits/undirected_weighted_girth data/undirected_weighted_graph1.bin 1000 10
+    - mpirun -np 1 -f ./mpi_config ./toolkits/undirected_weighted_girth data/undirected_weighted_graph1.bin 1000 20
   - 无向无权图围长
     - mpirun -np 1 -f ./mpi_config ./toolkits/undirected_unweighted_girth data/undirected_unweighted_graph1.bin 1000
   - 有向无权图围长
@@ -34,7 +34,7 @@
   - bfs
     - mpirun -np 3 -f ./mpi_config ./toolkits/bfs data/DBLP.bin 425957 0
   - 无向有权图围长
-    - mpirun -np 3 -f ./mpi_config ./toolkits/undirected_weighted_girth data/undirected_weighted_graph1.bin 100000 10
+    - mpirun -np 3 -f ./mpi_config ./toolkits/undirected_weighted_girth data/undirected_weighted_graph1.bin 100000 20
   - 无向无权图围长
     - mpirun -np 3 -f ./mpi_config ./toolkits/undirected_unweighted_girth data/undirected_unweighted_graph1.bin 100000
   - 有向无权图围长
