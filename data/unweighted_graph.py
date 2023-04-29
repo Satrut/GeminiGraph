@@ -34,7 +34,7 @@ for i in range(opt.v):
             continue
         if opt.undirected and j >= i:
             break
-        edges_list.append(f"{i} {j} 1")
+        edges_list.append(f"{i} {j}")
 edges_list = np.asarray(edges_list)
 
 assert len(edges_list) == max_edges

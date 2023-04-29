@@ -3,19 +3,15 @@
 - 生成数据集
   - cd data/
   - 生成无向无权图
-    - python3 unweighted_graph.py -v 1000 -e 2000 -o undirected_unweighted_graph1.txt --undirected
-  - 将无向无权图数据转化为图片
-    - python3 visual.py -v 10 -f undirected_unweighted_graph1.txt -o undirected_unweighted_graph1.png --undirected
+    - python3 unweighted_graph.py -v 1000 -e 1000 -o undirected_unweighted_graph1.txt --undirected
   - 生成有向无权图
-    - python3 unweighted_graph.py -v 100 -e 200 -o directed_unweighted_graph1.txt
-  - 将无向无权图数据转化为图片
-    - python3 visual.py -v 10 -f directed_unweighted_graph1.txt -o directed_unweighted_graph1.png
+    - python3 unweighted_graph.py -v 1000 -e 1000 -o directed_unweighted_graph1.txt
   - 生成无向有权图
     - python3 weighted_graph.py -v 1000 -e 2000 -w 20 -o undirected_weighted_graph1.txt
   - txt格式转bin格式
-    - ./../convert/txt2bin undirected_unweighted_graph1.txt undirected_unweighted_graph1.bin
-    - ./../convert/txt2bin directed_unweighted_graph1.txt directed_unweighted_graph1.bin
-    - ./../convert/txt2bin undirected_weighted_graph1.txt undirected_weighted_graph1.bin
+    - ./../convert/unweighted_txt2bin undirected_unweighted_graph1.txt undirected_unweighted_graph1.bin
+    - ./../convert/unweighted_txt2bin directed_unweighted_graph1.txt directed_unweighted_graph1.bin
+    - ./../convert/weighted_txt2bin undirected_weighted_graph1.txt undirected_weighted_graph1.bin
   - windows桌面数据集上传到服务器node16
     - scp -P 50016 C:\Users\satrut\Desktop\undirected_unweighted_graph1.bin yanghao@222.20.94.68:/home/yanghao/mpi_share/GeminiGraph/data
     - scp -P 50016 C:\Users\satrut\Desktop\directed_unweighted_graph1.bin yanghao@222.20.94.68:/home/yanghao/mpi_share/GeminiGraph/data
