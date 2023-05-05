@@ -29,3 +29,9 @@
 *.app
 *.txt
 *.bin
+data/directed_unweighted_graph1.bin
+data/directed_unweighted_graph1.txt
+data/undirected_unweighted_graph1.bin
+data/undirected_unweighted_graph1.txt
+data/undirected_weighted_graph1.txt
+data/undirected_weighted_graph1.bin
