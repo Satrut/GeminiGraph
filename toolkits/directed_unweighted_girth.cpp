@@ -206,6 +206,7 @@ void compute(Graph<Empty> *graph) {
             }
           }
           else if (res->dis > msg.dis + 1) {
+            // printf("src:%d\tdst:%d\tres.dis:%f\tmsg.dis:%f\n", src, dst, res->dis, msg.dis);
             // 新路径更短
             // 更长的路径没必要转发，减小带宽压力
             // 有res说明找到了环，但是只在dst处求出了该环的权值和，若继续转发该消息，环上的其他节点也能更新该环的权值，但耗费了更多无意义的资源

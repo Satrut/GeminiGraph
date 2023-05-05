@@ -175,19 +175,19 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
             // 条件1触发
             *conditionMark = true;
             // 比较保存的围长大小
-            if (girth > new_cicle && fabs(girth - new_cicle) > FLT_EPSILON) {
+            if ((girth > new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
               // 新围长更小，更新围长大小及环的信息     
 
               // 多线程下原子修改
               bool done1 = false, done2 = false;
               while (!(done1 = cas(&girth, girth, new_cicle)) || !(done2 = cas(&girthId, girthId, dst))) {
                 // 若有围长更小的线程完成围长的更新,则放弃该信息的更新
-                if (girth < new_cicle) {
+                if ((girth < new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
                   break;
                 }
               }
               // 被更小围长抢占则本信息作废
-              if (girth < new_cicle) {
+              if ((girth < new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
                 continue;
               }
 
@@ -360,7 +360,7 @@ int main(int argc, char **argv) {
   while ((beta - alpha > 2) && (fabs(beta - alpha - 2) > FLT_EPSILON)) {
     if (graph->partition_id == 0) {
       // 协调点v0计算t
-      if ((vertices * maxWeight > beta) && (abs(vertices * maxWeight - beta) > FLT_EPSILON)) {
+      if ((vertices * maxWeight > beta) && (fabs(vertices * maxWeight - beta) > FLT_EPSILON)) {
         int tmp = floor((alpha + beta) / 4);
         if (fabs(t - tmp) <= FLT_EPSILON) {
           t++;
@@ -401,7 +401,7 @@ int main(int argc, char **argv) {
         // 根据条件1更新alpha和beta:beta取2t和girth中的较小值
         // 更新最小围长值
         write_min(&minGirth, girth);
-        if ((2 * t > minGirth) && (abs(2 * t - minGirth) > FLT_EPSILON)) {
+        if ((2 * t > minGirth) && (fabs(2 * t - minGirth) > FLT_EPSILON)) {
           beta = minGirth;
         }
         else {
@@ -410,11 +410,11 @@ int main(int argc, char **argv) {
       }
       else {
         // 根据条件2更新alpha和beta
-        if ((abs(minGirth - 1e9) <= FLT_EPSILON) || ((minGirth > 2 * t) && (abs(minGirth - 2 * t) > FLT_EPSILON))) {
+        if ((fabs(minGirth - 1e9) <= FLT_EPSILON) || ((minGirth > 2 * t) && (fabs(minGirth - 2 * t) > FLT_EPSILON))) {
           alpha = 2 * t;
         }
         else {
-          if ((beta > minGirth) && (abs(beta - minGirth) > FLT_EPSILON)) {
+          if ((beta > minGirth) && (fabs(beta - minGirth) > FLT_EPSILON)) {
             beta = minGirth;
           }
         }
@@ -438,7 +438,7 @@ int main(int argc, char **argv) {
   }
 
   if (graph->partition_id == 0) {
-    if (abs(minGirth - 1e9) <= FLT_EPSILON) {
+    if (fabs(minGirth - 1e9) <= FLT_EPSILON) {
       printf("no circle\n");
     }
     else {

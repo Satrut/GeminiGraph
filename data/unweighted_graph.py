@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import os
+import networkx as nx
 
 parser = argparse.ArgumentParser(description='generate a random graph')
 parser.add_argument('-v', required=True, type=int,
@@ -24,26 +25,10 @@ if opt.e == -1:
 
 opt.o = os.path.basename(opt.o)
 
-print(f'{"an un" if opt.undirected else "a "}directed graph with '
-      f'{opt.v} {"vertices" if opt.v > 1 else "vertex"} and {opt.e} {"edges" if opt.e > 1 else "edge"} will be stored at {opt.o}')
+print(f'{"an un" if opt.undirected else "a "}directed graph with {opt.v} {"vertices" if opt.v > 1 else "vertex"} and {opt.e} {"edges" if opt.e > 1 else "edge"} will be stored at {opt.o}')
 
-edges_list = []
-for i in range(opt.v):
-    for j in range(opt.v):
-        if i == j:
-            continue
-        if opt.undirected and j >= i:
-            break
-        edges_list.append(f"{i} {j}")
-edges_list = np.asarray(edges_list)
-
-assert len(edges_list) == max_edges
-
-selection = sorted(np.random.choice(len(edges_list), opt.e, replace=False))
-selected_edges = edges_list[selection]
+G = nx.gnm_random_graph(opt.v, opt.e)
 
 with open(opt.o, 'wt') as f:
-    for i in range(opt.e):
-        f.write(selected_edges[i])
-        if i != opt.e-1:
-            f.write('\n')
+    for e in G.edges():
+        f.write(str(e[0])+' '+str(e[1])+'\n')
