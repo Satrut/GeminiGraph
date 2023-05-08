@@ -39,9 +39,8 @@ struct MSG {
 class MSGList {
 public:
   MSG *begin;
-  MSG *end;
-  MSGList():begin(nullptr), end(nullptr) {};
-  MSGList(MSG *begin, MSG *end):begin(begin), end(end) {};
+  MSGList() :begin(nullptr) {};
+  MSGList(MSG *begin, MSG *end) :begin(begin) {};
   ~MSGList() {
     for (MSG *cur = begin, *next; cur != nullptr; ) {
       next = cur->next;
@@ -49,39 +48,10 @@ public:
       cur = next;
     }
   }
-  // 尾插法插入
+  // 头插法插入
   void insert(MSG *msg) {
-    if (begin == nullptr) {
-      begin = end = msg;
-      return;
-    }
-    end->next = msg;
-    end = msg;
-  }
-  // 删除指定MSG
-  bool remove(MSG *msg) {
-    MSG *cur = begin;
-    if (begin == msg) {
-      begin = begin->next;
-      if (end == msg) {
-        end = nullptr;
-      }
-      delete msg;
-      return true;
-    }
-    while (cur->next != nullptr) {
-      if (cur->next == msg) {
-        if (msg == end) {
-          end = cur;
-        }
-        cur->next = cur->next->next;
-        delete msg;
-        return true;
-      }
-      cur = cur->next;
-    }
-    std::cout << "cannot find msg" << std::endl;
-    return false;
+    msg->next = begin;
+    begin = msg;
   }
   // 查找源为root的消息
   MSG *find(VertexId root) {
@@ -171,23 +141,23 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
           MSG *res = msglist[dst].find(root);
           // 已存在root的路径，求解围长
           if (res != nullptr) {
-            Weight new_cicle = res->dis + msg.dis + ptr->edge_data;
+            Weight new_circle = res->dis + msg.dis + ptr->edge_data;
             // 条件1触发
             *conditionMark = true;
             // 比较保存的围长大小
-            if ((girth > new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
+            if ((girth > new_circle) && (fabs(girth - new_circle) > FLT_EPSILON)) {
               // 新围长更小，更新围长大小及环的信息     
 
               // 多线程下原子修改
               bool done1 = false, done2 = false;
-              while (!(done1 = cas(&girth, girth, new_cicle)) || !(done2 = cas(&girthId, girthId, dst))) {
+              while (!(done1 = cas(&girth, girth, new_circle)) || !(done2 = cas(&girthId, girthId, dst))) {
                 // 若有围长更小的线程完成围长的更新,则放弃该信息的更新
-                if ((girth < new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
+                if ((girth < new_circle) && (fabs(girth - new_circle) > FLT_EPSILON)) {
                   break;
                 }
               }
               // 被更小围长抢占则本信息作废
-              if ((girth < new_cicle) && (fabs(girth - new_cicle) > FLT_EPSILON)) {
+              if ((girth < new_circle) && (fabs(girth - new_circle) > FLT_EPSILON)) {
                 continue;
               }
 
@@ -240,13 +210,13 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
         }
         return activated;
       },
-        [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
+      [&](VertexId dst, VertexAdjList<Weight> incoming_adj) {
       },
       [&](VertexId dst, MSG msg) {
         return 0;
       },
-        active_in
-        );
+      active_in
+    );
     // 每轮结束时v0检查是否触发条件1 其他节点发送conditionMark
     if (graph->partition_id == 0) {
       // v0接受所有节点的conditionMark状态，判断是否有条件1触发，若有则更新conditionMark和girth（汇聚围长）

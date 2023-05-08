@@ -27,7 +27,8 @@ opt.o = os.path.basename(opt.o)
 
 print(f'{"an un" if opt.undirected else "a "}directed graph with {opt.v} {"vertices" if opt.v > 1 else "vertex"} and {opt.e} {"edges" if opt.e > 1 else "edge"} will be stored at {opt.o}')
 
-G = nx.gnm_random_graph(opt.v, opt.e)
+G = nx.gnm_random_graph(opt.v, opt.e) if opt.undirected else nx.gnm_random_graph(
+    opt.v, opt.e, directed=True)
 
 with open(opt.o, 'wt') as f:
     for e in G.edges():

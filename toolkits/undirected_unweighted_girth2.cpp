@@ -5,7 +5,7 @@
 #include "core/graph.hpp"
 
 // 权值
-typedef float Weight;
+typedef uint32_t Weight;
 // 自定义单向链表，用于存储边和环的节点顺序
 struct MyList {
   VertexId vertex;
@@ -15,77 +15,95 @@ struct MyList {
     this->vertex = vertex;
     this->next = nullptr;
   }
-};
+} __attribute__((packed));
 
-// 消息结构体
-struct MSG {
-  // 用begin开头的单链表记录路径节点
-  MyList *begin;
-  // pre记录消息经过的上一节点
+struct BFSMSG {
+  MyList *path;
+  VertexId root;
   VertexId pre;
-  // 距离
   Weight dis;
-  // 节点数
   int count;
-  // 是否发送
   bool sent;
-  // 下一条消息
-  MSG *next;
-};
+  BFSMSG *next;
+} __attribute__((packed));
 
-// 消息链表
-class MSGList {
+class BFSMSGList {
 public:
-  MSG *begin;
-  MSG *end;
-  MSGList():begin(nullptr), end(nullptr) {};
-  MSGList(MSG *begin, MSG *end):begin(begin), end(end) {};
-  ~MSGList() {
-    for (MSG *cur = begin, *next; cur != nullptr; ) {
+  BFSMSG *begin;
+  BFSMSGList() :begin(nullptr) {};
+  BFSMSGList(BFSMSG *begin, BFSMSG *end) :begin(begin) {};
+  ~BFSMSGList() {
+    BFSMSG *cur = begin, *next = nullptr;
+    begin = nullptr;
+    while (cur != nullptr) {
       next = cur->next;
       delete cur;
       cur = next;
     }
   }
   // 尾插法插入
-  void insert(MSG *msg) {
-    if (begin == nullptr) {
-      begin = end = msg;
-      return;
-    }
-    end->next = msg;
-    end = msg;
+  void insert(BFSMSG *msg) {
+    msg->next = begin;
+    begin = msg;
   }
-  // 删除指定MSG
-  bool remove(MSG *msg) {
-    MSG *cur = begin;
-    if (begin == msg) {
-      begin = begin->next;
-      if (end == msg) {
-        end = nullptr;
-      }
-      delete msg;
-      return true;
-    }
-    while (cur->next != nullptr) {
-      if (cur->next == msg) {
-        if (msg == end) {
-          end = cur;
-        }
-        cur->next = cur->next->next;
-        delete msg;
-        return true;
+  // 查找源为root的消息
+  BFSMSG *find(VertexId root) {
+    BFSMSG *cur = begin;
+    while (cur != nullptr) {
+      if (cur->root == root) {
+        return cur;
       }
       cur = cur->next;
     }
-    std::cout << "cannot find msg" << std::endl;
-    return false;
+    return nullptr;
+  }
+  // 查找未发送的且字典序最小的MSG
+  BFSMSG *get() {
+    BFSMSG *res = nullptr;
+    BFSMSG *cur = begin;
+    while (cur != nullptr) {
+      if (cur->sent == false && (res == nullptr || res->root > cur->root)) {
+        res = cur;
+      }
+      cur = cur->next;
+    }
+    return res;
+  }
+};
+
+struct MSG {
+  VertexId root;
+  VertexId pre;
+  Weight dis;
+  bool sent;
+  MSG *next;
+} __attribute__((packed));
+
+// 消息链表
+class MSGList {
+public:
+  MSG *begin;
+  MSGList() :begin(nullptr) {};
+  MSGList(MSG *begin, MSG *end) :begin(begin) {};
+  ~MSGList() {
+    MSG *cur = begin, *next = nullptr;
+    begin = nullptr;
+    while (cur != nullptr) {
+      next = cur->next;
+      delete cur;
+      cur = next;
+    }
+  }
+  // 头插法插入
+  void insert(MSG *msg) {
+    msg->next = begin;
+    begin = msg;
   }
   // 查找源为root的消息
   MSG *find(VertexId root) {
     MSG *cur = begin;
     while (cur != nullptr) {
-      if (cur->begin->vertex == root) {
+      if (cur->root == root) {
         return cur;
       }
       cur = cur->next;
@@ -97,7 +115,7 @@ public:
     MSG *res = nullptr;
     MSG *cur = begin;
     while (cur != nullptr) {
-      if (cur->sent == false && (res == nullptr || res->begin->vertex > cur->begin->vertex)) {
+      if (cur->sent == false && (res == nullptr || res->root > cur->root)) {
         res = cur;
       }
       cur = cur->next;
@@ -112,7 +130,6 @@ void compute(Graph<Empty> *graph) {
 
   // 每个点保存自己计算出的围长及环的数据
   Weight *girth = graph->alloc_vertex_array<Weight>();
-  std::list<VertexId> circle[graph->vertices];
   VertexSubset *active_in = graph->alloc_vertex_subset();
   VertexSubset *active_out = graph->alloc_vertex_subset();
   // 源节点集
@@ -129,10 +146,9 @@ void compute(Graph<Empty> *graph) {
   MSG *init_msg = nullptr;
   for (VertexId i = 0;i < graph->vertices;i++) {
     init_msg = new MSG();
-    init_msg->begin = new MyList(i);
+    init_msg->root = i;
     init_msg->pre = graph->vertices;
     init_msg->dis = 0;
-    init_msg->count = 1;
     init_msg->sent = false;
     init_msg->next = nullptr;
     msglist[i].insert(init_msg);
@@ -154,7 +170,7 @@ void compute(Graph<Empty> *graph) {
       },
       [&](VertexId src, MSG msg, VertexAdjList<Empty> outgoing_adj) {
         VertexId activated = 0;
-        VertexId root = msg.begin->vertex;
+        VertexId root = msg.root;
 
         for (AdjUnit<Empty> *ptr = outgoing_adj.begin;ptr != outgoing_adj.end;ptr++) {
           VertexId dst = ptr->neighbour;
@@ -171,43 +187,16 @@ void compute(Graph<Empty> *graph) {
             if (new_circle < girth[dst]) {
               // 更新围长大小及环的信息          
               write_min(&girth[dst], new_circle);
-              circle[dst].clear();
-              // 插入p(s,u)
-              for (MyList *node = msg.begin;node != nullptr;node = node->next) {
-                circle[dst].push_back(node->vertex);
-              }
-              // 倒序插入p(s,v)，且不插入最后一个s
-              VertexId ids[res->count];
-              VertexId id = 0;
-              for (MyList *node = res->begin;node != nullptr;node = node->next, id++) {
-                ids[id] = node->vertex;
-              }
-              for (id = res->count - 1;id > 0;id--) {
-                circle[dst].push_back(ids[id]);
-              }
             }
           }
           // 更新最短路径
           if (res == nullptr) {
             // 不存在root的路径
             MSG *new_msg = new MSG();
+            new_msg->root = root;
             new_msg->dis = msg.dis + 1;
-            new_msg->count = msg.count + 1;
             new_msg->pre = src;
             new_msg->next = nullptr;
-
-            // 复制路径
-            MyList *node = msg.begin;
-            MyList *cur = new MyList(node->vertex);
-            new_msg->begin = cur;
-            node = node->next;
-            while (node != nullptr) {
-              cur->next = new MyList(node->vertex);
-              cur = cur->next;
-              node = node->next;
-            }
-            cur->next = new MyList(dst);
-
             new_msg->sent = false;
             msglist[dst].insert(new_msg);
             // 避免重复设置下轮发送端节点
@@ -217,80 +206,184 @@ void compute(Graph<Empty> *graph) {
             }
           }
           else if (res->dis > msg.dis + 1) {
-            // 新路径更短
-            // 更长的路径没必要转发，减小带宽压力
-            // 有res说明找到了环，但是只在dst处求出了该环的权值和，若继续转发该消息，环上的其他节点也能更新该环的权值，但耗费了更多无意义的资源
-            write_min(&res->dis, msg.dis + 1);
-            res->count = msg.count + 1;
-            res->pre = src;
-
-            // 清空路径
-            MyList *cur = res->begin, *next = res->begin->next;
-            res->begin = nullptr;
-            while (cur != nullptr) {
-              next = cur->next;
-              delete cur;
-              cur = next;
-            }
-
-            // 复制路径
-            MyList *node = msg.begin;
-            cur = new MyList(node->vertex);
-            res->begin = cur;
-            node = node->next;
-            while (node != nullptr) {
-              cur->next = new MyList(node->vertex);
-              cur = cur->next;
-              node = node->next;
-            }
-            cur->next = new MyList(dst);
-
-            res->sent = false;
-            // 避免重复设置下轮发送端节点
-            if (!active_out->get_bit(dst)) {
-              active_out->set_bit(dst);
-              activated += 1;
+            // 新路径更短            
+            bool wt_res = write_min(&res->dis, msg.dis + 1);
+            if (wt_res) {
+              res->pre = src;
+              res->sent = false;
+              // 避免重复设置下轮发送端节点
+              if (!active_out->get_bit(dst)) {
+                active_out->set_bit(dst);
+                activated += 1;
+              }
             }
           }
         }
         return activated;
       },
-        [&](VertexId dst, VertexAdjList<Empty> incoming_adj) {
+      [&](VertexId dst, VertexAdjList<Empty> incoming_adj) {
       },
       [&](VertexId dst, MSG msg) {
         return 0;
       },
-        active_in
-        );
+      active_in
+    );
     // 更新发送端和接收端节点集
     std::swap(active_in, active_out);
   }
 
-  exec_time += get_time();
-  if (graph->partition_id == 0) {
-    printf("exec_time=%lf(s)\n", exec_time);
-  }
-
   // 汇聚围长信息
   graph->gather_vertex_array(girth, 0);
+  // 围长对应的结点ID
+  VertexId max_v_i = 0;
+  // 围长
+  Weight minGirth = 0;
   if (graph->partition_id == 0) {
-    VertexId max_v_i = 0;
     for (VertexId v_i = 0;v_i < graph->vertices;v_i++) {
       if (girth[v_i] < 1e9 && girth[v_i] < girth[max_v_i]) {
         max_v_i = v_i;
       }
     }
-    if (girth[max_v_i] < 1e9) {
-      printf("girth=%f\n", girth[max_v_i]);
-      std::cout << "circle: ";
-      for (auto it = circle[max_v_i].begin();it != circle[max_v_i].end();it++) {
-        std::cout << *it << " ";
-      }
-      std::cout << std::endl;
+    minGirth = girth[max_v_i];
+    for (VertexId v_i = 1;v_i < graph->partitions;v_i++) {
+      // 向其他节点发送相关结点ID及围长
+      MPI_Send(&max_v_i, 1, MPI_UNSIGNED, v_i, 0, MPI_COMM_WORLD);
+      MPI_Send(&minGirth, 1, MPI_UNSIGNED, v_i, 0, MPI_COMM_WORLD);
+    }
+    if (minGirth < 1e9) {
+      printf("girth=%d\n", minGirth);
     }
     else {
       std::cout << "cannot find circle" << std::endl;
     }
+  }
+  else {
+    // 其他节点接收关键结点ID及围长
+    MPI_Recv(&max_v_i, 1, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&minGirth, 1, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  }
+
+  if (minGirth < 1e9) {
+    // 求解环
+    active_in->clear();
+    active_in->set_bit(max_v_i);
+    BFSMSGList bfslist[graph->vertices];
+    // 初始化消息链表
+    BFSMSG *bfsmsg = new BFSMSG();
+    bfsmsg->path = new MyList(max_v_i);
+    bfsmsg->root = max_v_i;
+    bfsmsg->pre = graph->vertices;
+    bfsmsg->dis = 0;
+    bfsmsg->sent = false;
+    bfsmsg->next = nullptr;
+    bfslist[max_v_i].insert(bfsmsg);
+    bool mark = false;
+    active_vertices = 1;
+    int i_i = 0;
+    while (!mark && active_vertices > 0) {
+      active_out->clear();
+      active_vertices = graph->process_edges<VertexId, BFSMSG>(
+        [&](VertexId src) {
+          // 求最小字典序的可发送消息
+          BFSMSG *msg = bfslist[src].get();
+          if (msg != nullptr) {
+            graph->emit(src, *msg);
+            msg->sent = true;
+          }
+        },
+        [&](VertexId src, BFSMSG msg, VertexAdjList<Empty> outgoing_adj) {
+          VertexId activated = 0;
+          VertexId root = msg.root;
+
+          for (AdjUnit<Empty> *ptr = outgoing_adj.begin;ptr != outgoing_adj.end;ptr++) {
+            VertexId dst = ptr->neighbour;
+            // 不要把消息往回发          
+            if (dst == msg.pre) {
+              continue;
+            }
+            // 查找是否已存在到root的路径，存在则找到环
+            BFSMSG *res = bfslist[dst].find(root);
+            if (res == nullptr) {
+              BFSMSG *new_msg = new BFSMSG();
+              new_msg->path = new MyList(root);
+              new_msg->root = root;
+              new_msg->dis = msg.dis + 1;
+              new_msg->pre = src;
+              new_msg->next = nullptr;
+              new_msg->sent = false;
+
+              // 记录path
+              MyList *cur = new_msg->path;
+              for (auto it = msg.path->next;it != nullptr;it = it->next) {
+                cur->next = new MyList(it->vertex);
+                cur = cur->next;
+              }
+              cur->next = new MyList(dst);
+
+              bfslist[dst].insert(new_msg);
+              // 避免重复设置下轮发送端节点
+              if (!active_out->get_bit(dst)) {
+                active_out->set_bit(dst);
+                activated += 1;
+              }
+            }
+            else {
+              if (mark) {
+                continue;
+              }
+              mark = true;
+              printf("circle:");
+              for (auto it = msg.path;it != nullptr;it = it->next) {
+                printf("%d ", it->vertex);
+              }
+              std::list<VertexId> list;
+              for (auto it = res->path;it != nullptr;it = it->next) {
+                list.push_front(it->vertex);
+              }
+              list.pop_back();
+              for (auto it = list.begin();it != list.end();it++) {
+                printf("%d ", *it);
+              }
+              printf("\n");
+            }
+          }
+          return activated;
+        },
+        [&](VertexId dst, VertexAdjList<Empty> incoming_adj) {
+        },
+        [&](VertexId dst, BFSMSG msg) {
+          return 0;
+        },
+        active_in
+      );
+      // 更新发送端和接收端节点集
+      std::swap(active_in, active_out);
+      // 各节点进行通信
+      if (graph->partition_id == 0) {
+        bool tmpMark = false;
+        // 0号节点收集信息
+        for (VertexId v_i = 1;v_i < graph->partitions;v_i++) {
+          MPI_Recv(&tmpMark, 1, MPI_CHAR, v_i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          if (tmpMark) {
+            mark = true;
+          }
+        }
+        // 整合后发送信息
+        for (VertexId v_i = 1;v_i < graph->partitions;v_i++) {
+          MPI_Send(&mark, 1, MPI_CHAR, v_i, 0, MPI_COMM_WORLD);
+        }
+      }
+      else {
+        // 其他节点发送后接收信息
+        MPI_Send(&mark, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+        MPI_Recv(&mark, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      }
+    }
+  }
+
+  exec_time += get_time();
+  if (graph->partition_id == 0) {
+    printf("exec_time=%lf(s)\n", exec_time);
   }
 
   // 释放malloc资源

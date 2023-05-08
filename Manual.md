@@ -39,3 +39,7 @@
     - mpirun -np 3 -f ./mpi_config ./toolkits/directed_unweighted_girth data/directed_unweighted_graph1.bin 100000
   - 无向有权图围长
     - mpirun -np 3 -f ./mpi_config ./toolkits/undirected_weighted_girth data/undirected_weighted_graph1.bin 100000 10
+
+
+1. 无向有权图在单机环境下可以运行100000节点和100000000条边共1.2GB的数据，在并行环境下最多可以运行100000条边共1.2MB的数据，再大的数据就会出错
+2. 无向无权图在单机环境下可以运行100000节点和1000000条边共12MB的数据，并行环境下最多可以运行100000条边共1.2MB的数据，数据再大就不行了
