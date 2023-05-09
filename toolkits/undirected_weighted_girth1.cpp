@@ -161,8 +161,6 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
                 continue;
               }
 
-              printf("src:%d dst:%d edgedata:%f\n", src, dst, ptr->edge_data);
-
               circle[dst].clear();
               // 插入p(s,u)
               for (MyList *node = msg.begin;node != nullptr;node = node->next) {
@@ -233,7 +231,6 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
           MPI_Recv(&tmpGirth, 1, MPI_FLOAT, v_i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
           if (tmpMark) {
             // 其他节点条件1触发 更新conditionMark、girth及ID
-            printf("tmpGirth:%f", tmpGirth);
             *conditionMark = true;
             if ((girth > tmpGirth) && (fabs(girth - tmpGirth) > FLT_EPSILON)) {
               girth = tmpGirth;
@@ -292,7 +289,6 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
   }
 
   // 释放malloc资源
-  // graph->dealloc_vertex_array(girth);
   delete active_in;
   delete active_out;
   return girth;
@@ -356,14 +352,11 @@ int main(int argc, char **argv) {
       MPI_Recv(&t, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 
-    // 同步所有节点
-    // MPI_Barrier(MPI_COMM_WORLD);
     // 初始化conditionMark
     conditionMark = false;
 
     // 运行多源有限距离的宽度优先搜索算法
-    Weight girth = compute(graph, t, &conditionMark);
-    // printf("girth:%f\n", girth);
+    Weight girth = compute(graph, t, &conditionMark);    
 
     // 更新 α和 β
     if (graph->partition_id == 0) {
