@@ -337,8 +337,8 @@ int main(int argc, char **argv) {
       }
       else {
         t = idx;
-        idx *= 2;
       }
+      idx *= 2;
       // v0传递t
       if (graph->partitions > 1) {
         for (VertexId v_i = 1;v_i < graph->partitions;v_i++) {
@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
     conditionMark = false;
 
     // 运行多源有限距离的宽度优先搜索算法
-    Weight girth = compute(graph, t, &conditionMark);    
+    Weight girth = compute(graph, t, &conditionMark);
 
     // 更新 α和 β
     if (graph->partition_id == 0) {

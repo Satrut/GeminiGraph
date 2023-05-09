@@ -144,7 +144,7 @@ Weight compute(Graph<Weight> *graph, Weight t, bool *conditionMark) {
               // 被更小围长抢占则本信息作废
               if ((girth < new_circle) && (fabs(girth - new_circle) > FLT_EPSILON)) {
                 continue;
-              }              
+              }
             }
           }
           // 不存在root的路径则更新，前面已验证满足距离限制t
@@ -280,8 +280,9 @@ int main(int argc, char **argv) {
       }
       else {
         t = idx;
-        idx *= 2;
+
       }
+      idx *= 2;
       // v0传递t
       if (graph->partitions > 1) {
         for (VertexId v_i = 1;v_i < graph->partitions;v_i++) {
